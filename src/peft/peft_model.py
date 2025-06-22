@@ -127,7 +127,7 @@ class PeftModel(PushToHubMixin, torch.nn.Module):
             cls = PEFT_TYPE_TO_TUNER_MAPPING[peft_config.peft_type]
             ctx = init_empty_weights if low_cpu_mem_usage else nullcontext
             with ctx():
-                self.base_model = cls(model, {adapter_name: peft_config}, adapter_name)
+                self.base_model = cls(model, {adapter_name: peft_config}, adapter_name) #triggers init of XLORA
 
         if hasattr(self.base_model, "_cast_adapter_dtype"):
             self.base_model._cast_adapter_dtype(
@@ -492,6 +492,7 @@ class PeftModel(PushToHubMixin, torch.nn.Module):
             raise ValueError("Cannot set a prompt learning adapter to trainable when loading pretrained adapter.")
         else:
             config.inference_mode = not is_trainable
+
         if isinstance(getattr(model, "base_model", None), XLoraModel):
             if not isinstance(config, XLoraConfig):
                 raise TypeError(f"Expected 'XLoraConfig', got '{type(config)}' instead.")

@@ -126,15 +126,25 @@ def _load_adapter_into_lora_model(
 
     adapter_weights = load_peft_weights(model_id, device=torch_device, subfolder=subfolder, **hf_hub_download_kwargs)
     new_adapter_weights = {}
-    # Rework the keys to contain the adapter numbers
-    for old_key in adapter_weights.keys():
+    total = len(adapter_weights)
+    for i, old_key in enumerate(adapter_weights.keys(), 1):
         key: str = old_key
-        # Remove all the prefixes until we have model.<...>
+        loop_count = 0
         while not (key.startswith("model.") and not key.startswith("model.model.")):
-            key = key[key.find(".") + 1 :]
-        # We always want model.model
+            if "." not in key:
+                print(f"Malformed key: {old_key} → {key}")
+                break 
+            key = key[key.find(".") + 1:]
+            loop_count += 1
+            if loop_count > 10:
+                print(f"likly Infinite loop detected for key: {old_key}")
+                break
+
         key = "model." + key
         new_adapter_weights[key] = adapter_weights[old_key]
+        if i % max(1, total // 20) == 0 or i == total:
+            print(f"Adapter load progress: {i}/{total} ({(i/total)*100:.1f}%)")
+
 
     # load the weights into the model
     ignore_mismatched_sizes = kwargs.get("ignore_mismatched_sizes", False)
